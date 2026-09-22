@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-brand-dark: #0A4A3C;
+  --color-brand-gold: #F2B759;
+  --color-brand-bg: #F5F7F8;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #F5F7F8;
+  color: #1E293B;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "AI QoS Monitor",
+  "description": "AI-Based Network Quality Classification and QoS monitoring dashboard powered by Random Forest classifier.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
