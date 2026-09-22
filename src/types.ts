@@ -37,3 +37,27 @@ export interface ProbeLogEntry {
 }
 
 export type ActiveScreen = 'monitor' | 'tuner' | 'dataset' | 'model-info' | 'history';
+
+export interface NetworkHistoryPoint {
+  id: string;
+  time: string;
+  latency: number;
+  jitter: number;
+  packetLoss: number;
+  throughput: number;
+  prediction: QoSClassification;
+  confidence: number;
+}
+
+export interface NetworkProbeResult {
+  latency: number;
+  jitter: number;
+  packetLoss: number;
+  throughput: number;
+  connectionType: string;
+  isOnline: boolean;
+  effectiveType: string;
+  measuredAt: string;
+}
+
+

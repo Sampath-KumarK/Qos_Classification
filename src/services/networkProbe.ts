@@ -17,10 +17,10 @@ function calculateMedian(values: number[]): number {
 }
 
 /**
- * Perform 20 latency probes to calculate RTT, Jitter, and Packet Loss.
+ * Perform latency probes to calculate RTT, Jitter, and Packet Loss.
  */
-async function runLatencyTest(): Promise<{ latency: number, jitter: number, packetLoss: number }> {
-  const NUM_PROBES = 20;
+async function runLatencyTest(numProbes: number = 20): Promise<{ latency: number, jitter: number, packetLoss: number }> {
+  const NUM_PROBES = numProbes;
   const rtts: number[] = [];
   let failures = 0;
 
@@ -28,14 +28,16 @@ async function runLatencyTest(): Promise<{ latency: number, jitter: number, pack
     const start = performance.now();
     try {
       const controller = new AbortController();
-      // 2-second timeout per probe
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      // 1.5-second timeout per probe
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
 
-      // Cache-busting URL to ensure real network round trip
-      const url = `${API_BASE_URL}/network/ping?cacheBust=${Date.now()}_${i}`;
+      // Measure real internet edge latency by pinging a globally distributed CDN (Cloudflare)
+      // This matches standard speed tests instead of measuring latency to the specific AI backend.
+      const url = `https://cloudflare.com/cdn-cgi/trace?cacheBust=${Date.now()}_${i}`;
       
       const response = await fetch(url, {
         method: 'GET',
+        mode: 'no-cors', // We only care about the time, not the response body
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' },
         signal: controller.signal,
@@ -43,7 +45,8 @@ async function runLatencyTest(): Promise<{ latency: number, jitter: number, pack
 
       clearTimeout(timeoutId);
 
-      if (response.ok) {
+      // An 'opaque' type means the network request succeeded (even if blocked by CORS for reading)
+      if (response.ok || response.type === 'opaque') {
         const elapsed = performance.now() - start;
         rtts.push(elapsed);
       } else {
@@ -117,16 +120,13 @@ async function downloadStream(durationMs: number): Promise<number> {
 }
 
 /**
- * Runs a multi-stream throughput test over a fixed duration (e.g. 5 seconds)
+ * Runs a multi-stream throughput test over a fixed duration
  */
-async function runThroughputTest(): Promise<number> {
-  const NUM_STREAMS = 4;
-  const TEST_DURATION_MS = 5000; // 5 seconds
-  
+async function runThroughputTest(durationMs: number = 5000, numStreams: number = 4): Promise<number> {
   const start = performance.now();
   
   // Start parallel download streams
-  const downloadPromises = Array.from({ length: NUM_STREAMS }).map(() => downloadStream(TEST_DURATION_MS));
+  const downloadPromises = Array.from({ length: numStreams }).map(() => downloadStream(durationMs));
   
   const results = await Promise.all(downloadPromises);
   
@@ -136,7 +136,7 @@ async function runThroughputTest(): Promise<number> {
   // Total bytes across all streams
   const totalBytes = results.reduce((acc, bytes) => acc + bytes, 0);
 
-  console.log(`[DEBUG] Throughput Test: ${totalBytes} bytes downloaded in ${elapsedSeconds.toFixed(2)}s using ${NUM_STREAMS} streams.`);
+  console.log(`[DEBUG] Throughput Test: ${totalBytes} bytes downloaded in ${elapsedSeconds.toFixed(2)}s using ${numStreams} streams.`);
 
   if (elapsedSeconds <= 0.1 || totalBytes === 0) return 0.1;
 
@@ -149,13 +149,17 @@ async function runThroughputTest(): Promise<number> {
 /**
  * Main function to run the full real network probe
  */
-export async function probeRealNetwork(): Promise<NetworkProbeResult> {
-  console.log("[DEBUG] Starting New Network Measurement...");
+export async function probeRealNetwork(fastMode: boolean = false): Promise<NetworkProbeResult> {
+  console.log(`[DEBUG] Starting Network Measurement (fastMode=${fastMode})...`);
   
-  const { latency, jitter, packetLoss } = await runLatencyTest();
+  const numProbes = fastMode ? 6 : 20;
+  const durationMs = fastMode ? 1800 : 5000;
+  const numStreams = fastMode ? 2 : 4;
+
+  const { latency, jitter, packetLoss } = await runLatencyTest(numProbes);
   console.log(`[DEBUG] Latency: ${latency}ms, Jitter: ${jitter}ms, Loss: ${packetLoss}%`);
   
-  const throughput = await runThroughputTest();
+  const throughput = await runThroughputTest(durationMs, numStreams);
   console.log(`[DEBUG] Throughput: ${throughput} Mbps`);
 
   // Default connection type info
@@ -180,3 +184,4 @@ export async function probeRealNetwork(): Promise<NetworkProbeResult> {
     measuredAt: new Date().toLocaleTimeString(),
   };
 }
+
